@@ -1,0 +1,10 @@
+{
+  "train_runtime": 322.9201,
+  "train_samples_per_second": 173.418,
+  "train_steps_per_second": 10.839,
+  "total_flos": 3492820923167040.0,
+  "train_loss": 1.9307094437735421,
+  "epoch": 2.0,
+  "best_model_checkpoint": "models/cpc_classifier/checkpoint-3400",
+  "best_metric": 0.19654487913551283
+}

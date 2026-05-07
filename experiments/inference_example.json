@@ -1,0 +1,18 @@
+{
+  "input_text": "An AI-assisted patent drafting system for e-commerce search ranking and product retrieval using dense retrieval, reranking, and online learning.",
+  "output_format": [
+    {
+      "label": "G06",
+      "probability": 0.73
+    },
+    {
+      "label": "H04",
+      "probability": 0.18
+    },
+    {
+      "label": "G01",
+      "probability": 0.04
+    }
+  ],
+  "note": "本文件只是输出格式示例，不代表真实预测结果。"
+}

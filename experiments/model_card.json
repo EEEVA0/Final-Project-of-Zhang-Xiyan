@@ -1,0 +1,15 @@
+{
+  "model_type": "CPC root classifier",
+  "base_model": "distilroberta-base",
+  "task": "Patent CPC root classification",
+  "num_labels": 122,
+  "train_samples": 28000,
+  "eval_samples": 3000,
+  "max_len": 256,
+  "epochs": 2,
+  "learning_rate": 0.00002,
+  "best_checkpoint": "models/cpc_classifier/checkpoint-3400",
+  "best_metric_macro_f1": 0.19654487913551283,
+  "train_loss": 1.9307094437735421,
+  "usage": "This classifier provides CPC-domain prediction results for patent drafting agents."
+}

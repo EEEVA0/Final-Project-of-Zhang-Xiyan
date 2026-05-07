@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PatentFlow Enterprise</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-panel: #ffffff;
+      --border-color: #e2e8f0;
+      --primary-blue: #2563eb;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .app-header {
+      background-color: var(--bg-dark);
+      color: white;
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar-left {
+      width: 320px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #f1f5f9;
+      min-width: 0;
+    }
+
+    .sidebar-right {
+      width: 350px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+      background: #f8fafc;
+    }
+
+    .panel-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    textarea.custom-input {
+      width: 100%;
+      height: 200px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 16px;
+    }
+
+    /* ── NEW: Revision box ── */
+    .revision-box {
+      border-top: 1px solid var(--border-color);
+      padding: 12px 16px;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .revision-box textarea {
+      width: 100%;
+      height: 72px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      resize: none;
+    }
+    .revision-box textarea:disabled {
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+
+    pre.document-view {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 24px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-main);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      height: 100%;
+      overflow-y: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .agent-pipeline {
+      height: 92px;
+      background: linear-gradient(90deg, #0f172a 0%, #111827 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 14px;
+      flex-shrink: 0;
+      border-top: 1px solid #1e293b;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .pipeline-step i { font-size: 15px; }
+    .pipeline-step.active {
+      color: #e0f2fe;
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2), 0 0 18px rgba(56, 189, 248, 0.35);
+      transform: scale(1.04);
+      animation: pulseGlow 1.4s infinite;
+    }
+    .pipeline-step.completed {
+      color: #dcfce7;
+      background: rgba(34, 197, 94, 0.16);
+      border-color: rgba(34, 197, 94, 0.55);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.22);
+    }
+    .pipeline-step.pending { opacity: 0.75; }
+    .pipeline-divider {
+      flex: 1;
+      height: 3px;
+      background: linear-gradient(90deg, #334155 0%, #475569 100%);
+      border-radius: 999px;
+      margin: 0 4px;
+      opacity: 0.85;
+    }
+    @keyframes pulseGlow {
+      0%   { box-shadow: 0 0 0 1px rgba(56,189,248,0.2), 0 0 12px rgba(56,189,248,0.25); }
+      50%  { box-shadow: 0 0 0 1px rgba(56,189,248,0.35),0 0 24px rgba(56,189,248,0.45); }
+      100% { box-shadow: 0 0 0 1px rgba(56,189,248,0.2), 0 0 12px rgba(56,189,248,0.25); }
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 220px;
+      margin-top: 10px;
+    }
+
+    /* ── NEW: Evaluation justification table ── */
+    .eval-table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .eval-table th {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .eval-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+      color: var(--text-main);
+    }
+    .eval-table tr:last-child td { border-bottom: none; }
+    .score-badge {
+      display: inline-block;
+      width: 32px;
+      text-align: center;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 0;
+      font-size: 12px;
+    }
+    .score-high   { background: #dcfce7; color: #15803d; }
+    .score-mid    { background: #fef9c3; color: #a16207; }
+    .score-low    { background: #fee2e2; color: #b91c1c; }
+
+    /* ── NEW: Export dropdown ── */
+    .export-dropdown .dropdown-item { font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="d-flex align-items-center gap-2">
+      <div class="bg-primary text-white rounded px-2 py-1 fw-bold">P</div>
+      <span class="fs-5 fw-semibold">PatentFlow <span class="badge bg-secondary ms-1" style="font-size:10px;">ENTERPRISE (KG)</span></span>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <button class="btn btn-primary btn-sm px-3" id="runBtn">
+        <i class="bi bi-play-fill"></i> Run All Agents
+      </button>
+
+      <!-- ── NEW: Export dropdown replaces the old single button ── -->
+      <div class="dropdown export-dropdown">
+        <button class="btn btn-outline-light btn-sm px-3 dropdown-toggle" id="exportBtn"
+                data-bs-toggle="dropdown" disabled>
+          <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="#" id="exportTxt">
+              <i class="bi bi-file-earmark-text me-2"></i>Export as .txt
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="#" id="exportDocx">
+              <i class="bi bi-file-earmark-word me-2 text-primary"></i>Export as .docx
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- LEFT SIDEBAR — unchanged inputs + NEW revision box at bottom -->
+    <aside class="sidebar-left">
+      <div class="panel-header">Input / Context</div>
+      <div class="panel-body">
+        <label class="form-label fs-6 fw-bold">技术交底书 (Project Description)</label>
+        <textarea id="inputBox" class="custom-input" placeholder="在此粘贴你的自然语言大段描述..."></textarea>
+
+        <div class="mb-3">
+          <label class="form-label fs-6 fw-bold">KG Root Hint</label>
+          <input type="text" id="kgHint" class="form-control form-control-sm" value="information retrieval">
+        </div>
+
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="useKgSwitch" checked>
+          <label class="form-check-label text-muted fs-6" for="useKgSwitch">Enable Knowledge Graph</label>
+        </div>
+      </div>
+
+      <!-- ── NEW: Revision instruction area ── -->
+      <div class="revision-box">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="fw-bold" style="font-size:13px;">Revision Instructions</span>
+          <span class="text-muted" style="font-size:11px;">Human-in-the-Loop</span>
+        </div>
+        <textarea id="revisionBox" placeholder="e.g. 'Make the claims broader' or 'Add more technical depth to section 3'..." disabled></textarea>
+        <button class="btn btn-sm btn-outline-primary w-100 mt-2" id="reviseBtn" disabled>
+          <i class="bi bi-pencil-square"></i> Submit Revision
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT — unchanged -->
+    <main class="main-content">
+      <ul class="nav nav-tabs px-3 pt-2 bg-white border-bottom-0" id="outputTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active fw-bold text-success" id="reviewed-tab" data-bs-toggle="tab" data-bs-target="#reviewed-pane" type="button" role="tab">
+            <i class="bi bi-check-all"></i> Reviewed Draft (V2)
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold text-primary" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane" type="button" role="tab">
+            <i class="bi bi-card-text"></i> Summary
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold text-secondary" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw-pane" type="button" role="tab">
+            <i class="bi bi-file-earmark-code"></i> Raw Draft (V1)
+          </button>
+        </li>
+      </ul>
+
+      <div class="panel-body tab-content" style="background:#f8fafc;">
+        <div class="tab-pane fade show active h-100" id="reviewed-pane" role="tabpanel">
+          <pre id="reviewedOutput" class="document-view text-muted">Waiting for execution...</pre>
+        </div>
+        <div class="tab-pane fade h-100" id="summary-pane" role="tabpanel">
+          <pre id="summaryOutput" class="document-view text-muted">Waiting for execution...</pre>
+        </div>
+        <div class="tab-pane fade h-100" id="raw-pane" role="tabpanel">
+          <pre id="rawOutput" class="document-view text-muted">Waiting for execution...</pre>
+        </div>
+      </div>
+
+      <div class="agent-pipeline">
+        <span class="fw-bold me-3" style="font-size:12px;letter-spacing:1px;">AGENT PIPELINE</span>
+        <div class="pipeline-step pending" id="step1"><i class="bi bi-circle"></i> 1. Parser</div>
+        <div class="pipeline-divider"></div>
+        <div class="pipeline-step pending" id="step2"><i class="bi bi-circle"></i> 2. Innovation</div>
+        <div class="pipeline-divider"></div>
+        <div class="pipeline-step pending" id="step3"><i class="bi bi-circle"></i> 3. Drafting</div>
+        <div class="pipeline-divider"></div>
+        <div class="pipeline-step pending" id="step4"><i class="bi bi-circle"></i> 4. Review & Eval</div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR — radar chart + NEW justification table -->
+    <aside class="sidebar-right">
+      <div class="panel-header">Assistant & Metrics</div>
+      <div class="panel-body">
+
+        <div class="text-center mb-2">
+          <h6 class="fw-bold text-dark mb-0">Draft Quality Score</h6>
+          <div class="chart-container">
+            <canvas id="scoreChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ── NEW: Per-dimension justification table ── -->
+        <div id="evalTableWrap" style="display:none;">
+          <hr class="my-2">
+          <h6 class="fw-bold text-dark" style="font-size:13px;">Dimension Breakdown</h6>
+          <table class="eval-table">
+            <thead>
+              <tr><th>Dimension</th><th>Score</th><th>Justification</th></tr>
+            </thead>
+            <tbody id="evalTableBody"></tbody>
+          </table>
+        </div>
+
+        <hr>
+
+        <h6 class="fw-bold text-dark fs-6 mt-3">Generation Metadata</h6>
+        <div class="bg-light p-3 rounded border text-secondary" style="font-size:13px;">
+          <p class="mb-1"><strong>Title:</strong> <span id="metaTitle">N/A</span></p>
+          <p class="mb-1"><strong>KG Status:</strong> <span id="metaKG">N/A</span></p>
+          <p class="mb-0"><strong>Status:</strong> <span id="metaStatus" class="text-primary">Ready</span></p>
+        </div>
+
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ─────────────────────────────────────────────
+    // 1. Radar chart (unchanged init)
+    // ─────────────────────────────────────────────
+    const DIMENSIONS = ['Structural\nCompleteness', 'Content\nConsistency', 'Clarity', 'Practical\nValue', 'Style\nCompliance'];
+    const DIM_KEYS   = ['structural_completeness', 'content_consistency', 'clarity', 'practical_value', 'style_compliance'];
+
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+    let radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: DIMENSIONS,
+        datasets: [{
+          label: 'Score',
+          data: [0, 0, 0, 0, 0],
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          borderColor: 'rgba(37, 99, 235, 1)',
+          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } },
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // 2. Pipeline UI (unchanged)
+    // ─────────────────────────────────────────────
+    const steps = ['step1','step2','step3','step4'].map(id => document.getElementById(id));
+
+    function updatePipelineUI(currentStepIndex) {
+      steps.forEach((step, idx) => {
+        const icon = step.querySelector('i');
+        step.className = 'pipeline-step';
+        if (idx < currentStepIndex)       { step.classList.add('completed'); icon.className = 'bi bi-check-circle-fill'; }
+        else if (idx === currentStepIndex) { step.classList.add('active');    icon.className = 'bi bi-arrow-repeat'; }
+        else                               { step.classList.add('pending');   icon.className = 'bi bi-circle'; }
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // 3. NEW: Parse evaluation scores + justifications
+    //    Backend should return data.scores = { structural_completeness: {score:8, justification:"..."}, ... }
+    //    Falls back to random scores if not present (same as original behaviour)
+    // ─────────────────────────────────────────────
+    const DIM_LABELS = {
+      structural_completeness: 'Structural Completeness',
+      content_consistency:     'Content Consistency',
+      clarity:                 'Clarity of Expression',
+      practical_value:         'Practical Value',
+      style_compliance:        'Style Compliance'
+    };
+
+    function updateChartAndTable(scoresObj) {
+      const genScore = () => parseFloat((8.0 + Math.random() * 1.5).toFixed(1));
+      const tableBody = document.getElementById('evalTableBody');
+      tableBody.innerHTML = '';
+
+      const chartValues = DIM_KEYS.map(key => {
+        const entry = scoresObj && scoresObj[key] ? scoresObj[key] : null;
+        const score = entry ? parseFloat(entry.score) : genScore();
+        const justification = entry ? entry.justification : '—';
+
+        // badge colour
+        let badgeClass = score >= 8 ? 'score-high' : score >= 6 ? 'score-mid' : 'score-low';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="white-space:nowrap;font-weight:500;">${DIM_LABELS[key]}</td>
+          <td><span class="score-badge ${badgeClass}">${score}</span></td>
+          <td style="color:#475569;">${justification}</td>
+        `;
+        tableBody.appendChild(tr);
+        return score;
+      });
+
+      radarChart.data.datasets[0].data = chartValues;
+      radarChart.update();
+      document.getElementById('evalTableWrap').style.display = 'block';
+    }
+
+    // ─────────────────────────────────────────────
+    // 4. NEW: Export helpers
+    // ─────────────────────────────────────────────
+    let lastDraftText = '';   // stores reviewed draft after run
+    let lastTitle = 'patent'; // stores title for filename
+
+    function getFullDraft() {
+      // Export the best available version: revised > raw
+      const reviewed = document.getElementById('reviewedOutput').textContent;
+      const raw = document.getElementById('rawOutput').textContent;
+      const notRevised = reviewed.startsWith('✏️') || reviewed === 'Waiting for execution...';
+      return notRevised ? raw : reviewed;
+    }
+
+    // Export as plain text
+    document.getElementById('exportTxt').addEventListener('click', e => {
+      e.preventDefault();
+      const text = getFullDraft();
+      if (!text || text === 'Waiting for execution...') return alert('No draft to export yet.');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      triggerDownload(blob, `${lastTitle}.txt`);
+    });
+
+    // Export as .docx using a minimal Office Open XML template
+    document.getElementById('exportDocx').addEventListener('click', e => {
+      e.preventDefault();
+      const text = getFullDraft();
+      if (!text || text === 'Waiting for execution...') return alert('No draft to export yet.');
+      exportAsDocx(text, lastTitle);
+    });
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Build a minimal .docx (ZIP with word/document.xml) without any library dependency
+    async function exportAsDocx(text, title) {
+      // Each line → a <w:p> paragraph
+      const escXml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const lines = text.split('\n');
+      const paragraphs = lines.map(line => {
+        const trimmed = line.trim();
+        // Detect section headings: lines that are ALL CAPS or end with a colon
+        const isHeading = trimmed && (trimmed === trimmed.toUpperCase() && trimmed.length > 3);
+        const styleId = isHeading ? 'Heading1' : 'Normal';
+        return `<w:p><w:pPr><w:pStyle w:val="${styleId}"/></w:pPr><w:r><w:t xml:space="preserve">${escXml(line)}</w:t></w:r></w:p>`;
+      }).join('\n');
+
+      const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t>${escXml(title)}</w:t></w:r></w:p>
+    ${paragraphs}
+    <w:sectPr/>
+  </w:body>
+</w:document>`;
+
+      const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+      const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:styleId="Normal"><w:name w:val="Normal"/>
+    <w:rPr><w:sz w:val="24"/></w:rPr></w:style>
+  <w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/>
+    <w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style>
+  <w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>
+    <w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style>
+</w:styles>`;
+
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml"  ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml"   ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+
+      const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+      // Use fflate via CDN for ZIP creation if available, else fall back to txt
+      try {
+        const fflate = await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');
+        const enc = s => new TextEncoder().encode(s);
+        const zipped = fflate.zipSync({
+          '[Content_Types].xml':     enc(contentTypes),
+          '_rels/.rels':             enc(rootRels),
+          'word/document.xml':       enc(docXml),
+          'word/styles.xml':         enc(stylesXml),
+          'word/_rels/document.xml.rels': enc(relsXml),
+        });
+        triggerDownload(new Blob([zipped], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), `${title}.docx`);
+      } catch(err) {
+        console.warn('fflate not available, falling back to .txt', err);
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        triggerDownload(blob, `${title}.txt`);
+        alert('Word export requires fflate. Downloaded as .txt instead.');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 5. Main run button (original logic preserved, scores wired to new table)
+    // ─────────────────────────────────────────────
+    const runBtn    = document.getElementById('runBtn');
+    const exportBtn = document.getElementById('exportBtn');
+
+    runBtn.addEventListener('click', async () => {
+      const text = document.getElementById('inputBox').value.trim();
+      if (!text) return alert("Please enter the project description.");
+      const root_hint = document.getElementById('kgHint').value;
+
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+      document.getElementById('metaStatus').innerHTML = '<span class="text-warning">Running Agents...</span>';
+
+      document.getElementById('reviewedOutput').textContent = "Executing models...";
+      document.getElementById('summaryOutput').textContent  = "Executing models...";
+      document.getElementById('rawOutput').textContent      = "Executing models...";
+      document.getElementById('evalTableWrap').style.display = 'none';
+      updatePipelineUI(0);
+
+      let fakeProgress = 0;
+      const progressInterval = setInterval(() => {
+        if (fakeProgress < 3) { updatePipelineUI(fakeProgress); fakeProgress++; }
+      }, 5000);
+
+      try {
+        const res = await fetch("http://localhost:8000/api/patent/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, root_hint })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        clearInterval(progressInterval);
+        updatePipelineUI(4);
+
+        // Raw (V1) = Drafting Agent first output
+        document.getElementById("rawOutput").textContent = data.draft || "No raw draft returned.";
+        document.getElementById("rawOutput").classList.remove("text-muted");
+        document.getElementById("rawOutput").classList.add("text-dark");
+
+        // Reviewed (V2) = only updated after user submits revision
+        document.getElementById("reviewedOutput").textContent = "✏️ Submit a revision instruction on the left to generate a reviewed version.";
+        document.getElementById("reviewedOutput").classList.add("text-muted");
+        document.getElementById("reviewedOutput").classList.remove("text-dark");
+
+        document.getElementById("summaryOutput").textContent = data.summary || "No summary returned.";
+        document.getElementById("summaryOutput").classList.remove("text-muted");
+        document.getElementById("summaryOutput").classList.add("text-dark");
+
+        // Switch to Raw tab after first run
+        document.getElementById("raw-tab").click();
+
+        lastTitle = data.title || 'patent';
+        document.getElementById('metaTitle').textContent  = lastTitle;
+        document.getElementById('metaKG').textContent     = data.kg_used ? `Enabled (${data.kg_root_hint})` : "Disabled";
+        document.getElementById('metaStatus').innerHTML   = '<span class="text-success fw-bold">Success ✅</span>';
+
+        // ── NEW: use structured scores if backend provides them, else random fallback
+        updateChartAndTable(data.scores || null);
+
+        exportBtn.disabled = false;
+
+        // ── NEW: unlock revision controls
+        document.getElementById('revisionBox').disabled = false;
+        document.getElementById('reviseBtn').disabled   = false;
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        console.error(error);
+        document.getElementById('metaStatus').innerHTML = '<span class="text-danger fw-bold">Failed ❌</span>';
+        alert("Execution failed: " + error.message);
+      } finally {
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<i class="bi bi-play-fill"></i> Run All Agents';
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // 6. NEW: Revision submit
+    // ─────────────────────────────────────────────
+    document.getElementById('reviseBtn').addEventListener('click', async () => {
+      const instructions = document.getElementById('revisionBox').value.trim();
+      if (!instructions) return alert('Please enter revision instructions.');
+
+      const originalInput = document.getElementById('inputBox').value.trim();
+      // Send the latest version (revised if exists, else raw) to the revision agent
+      const _reviewed = document.getElementById('reviewedOutput').textContent;
+      const _raw = document.getElementById('rawOutput').textContent;
+      const currentDraft = (_reviewed.startsWith('✏️') || _reviewed === 'Waiting for execution...') ? _raw : _reviewed;
+
+      const reviseBtn = document.getElementById('reviseBtn');
+      reviseBtn.disabled = true;
+      reviseBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Revising...';
+      document.getElementById('metaStatus').innerHTML = '<span class="text-warning">Revising draft...</span>';
+
+      try {
+        const res = await fetch("http://localhost:8000/api/patent/revise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            original_input: originalInput,
+            current_draft:  currentDraft,
+            instructions:   instructions
+          })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById('reviewedOutput').textContent = data.revised_draft || currentDraft;
+        document.getElementById('reviewedOutput').classList.remove('text-muted');
+        document.getElementById('reviewedOutput').classList.add('text-dark');
+
+        // switch to reviewed tab
+        document.getElementById('reviewed-tab').click();
+
+        if (data.scores) updateChartAndTable(data.scores);
+        document.getElementById('metaStatus').innerHTML = '<span class="text-success fw-bold">Revised ✅</span>';
+        document.getElementById('revisionBox').value = '';
+
+      } catch (error) {
+        console.error(error);
+        document.getElementById('metaStatus').innerHTML = '<span class="text-danger fw-bold">Revision failed ❌</span>';
+        alert("Revision failed: " + error.message);
+      } finally {
+        reviseBtn.disabled = false;
+        reviseBtn.innerHTML = '<i class="bi bi-pencil-square"></i> Submit Revision';
+      }
+    });
+  </script>
+</body>
+</html>
